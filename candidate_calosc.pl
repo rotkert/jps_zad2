@@ -97,11 +97,12 @@ match_arg_lists([Arg1|Rest1],[Arg2|Rest2],BindingsIn,BindingsOut) :-
 match_args(Arg1, Arg2, BindingsIn, [NewBinding|BindingsIn]):-
            find_binding(Arg1, Arg2, BindingsIn, NewBinding).
 
+match_args(Arg1, Arg2, BindingsIn, BindingsIn):-
+           find_binding(Arg1, Arg2, BindingsIn, []).
+
 find_binding(Arg1, Arg2, [binding(Arg1, Arg2) | _], []):- 
     !.
 find_binding(Arg1, Arg2, [binding(X, _) | RestBindings], BindingOut) :-
     Arg1 \= X,
     find_binding(Arg1, Arg2, RestBindings, BindingOut).
 find_binding(Arg1, Arg2, [], binding(Arg1, Arg2)).
-
-    
