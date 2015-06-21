@@ -1,9 +1,95 @@
 known_fact(brat(andrzej, aneta)).
+known_fact(brat(marian, aneta)).
 known_fact(maz(mikolaj, aneta)).
 known_fact(szwagier(mikolaj, andrzej)).
 
 predicate(brat,2).
 predicate(maz,2).
+
+learn( Predicate, NegExamples)  :-
+   gen_positive(PosExamples),
+   get_negative(Predicate, PosExamples, NegExamples).
+   %learn( Rule, PosExamples, NegExamples, Vars, Description),                                     
+   %nl, write( Class), write('  <== '), nl,                                   
+   %writelist( Description),
+   %assert( Class  <==  Description).                                      
+
+gen_positive(PosExamples):-
+	findall(X, is_pos(X), PosExamples).
+	
+is_pos(X):-
+	known_fact(X),
+	functor(X, Functor, _),
+	not(predicate(Functor,_)).
+
+get_negative(Predicate, PosExamples, NegExamples):-
+	setof(X, get_objects(X), Objects),
+	findall(Y, get_neg(Predicate, Objects, PosExamples, Y), NegExamples).
+	
+	
+get_objects(X) :-
+	known_fact(Z),
+	Z =.. [_|Args],
+	get_name(Args, X).
+
+get_name([X], X).
+get_name([X|_], X).
+get_name([_|RestArgs], X) :-
+	get_name(RestArgs, X).
+	
+get_neg(Predicate, Objects, PosExamples, Neg):-
+	member(M1, Objects),
+	member(M2, Objects),
+	M1 \= M2,
+	Neg =.. [Predicate, M1, M2],
+	not(member(Neg, PosExamples)).
+   
+learn(Rule, [], _, _, Rule).               
+
+learn( Rule, PosExamples, NegExamples, Vars, [NewRule | NewRules])  :-
+   learn_conj( Rule, PosExamples, NegExamples, Vars,NewRule, _),
+   remove( PosExamples, NewRule, RestPosExamples),                       
+   learn( Rule, RestPosExamples, NegExamples, Vars, NewRules).   
+
+remove( [], _, []).
+
+remove( [Example | Examples1], Rule, Examples1)  :-
+   covers(Rule, Example), !,                                        
+   remove( Example, Rule, Examples1).                                     
+
+remove( [Example | Examples], Rule, [Example | Examples1])  :-                         
+   remove( Examples, Rule, Examples1).   
+
+learn_conj( Rule, _, [], Vars, Rule, Vars ).                         
+
+learn_conj( Rule, PosExamples,NegExamples, Vars, NewRule, RetVars)  :-
+   choose_cond(Rule, PosExamples,NegExamples, Vars, Rule1, Vars1),                        
+   filter( PosExamples, Rule1, PosExamples1),
+   filter( NegExamples, Rule1, NegExamples1),
+   learn_conj( Rule1, PosExamples1, NegExamples1, Vars1, NewRule, RetVars).
+
+choose_cond(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars)  :-
+   findall( rule_pack(NR,NV)/Score, score( Rule, PosExamples, NegExamples, Vars, NR, NV, Score), RVs),
+   best( RVs, rule_pack(NewRule, RetVars)).
+
+best( [ AttVal/_], AttVal).
+best( [ AV0/S0, AV1/S1 | AVSlist], AttVal)  :-
+   S1  >  S0, !,                                               
+   best( [AV1/S1 | AVSlist], AttVal)
+   ;
+   best( [AV0/S0 | AVSlist], AttVal).
+
+score(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars, Score) :-
+   candidate( Rule, PosExamples, NegExamples, Vars, NewRule, RetVars),             
+   filter( PosExamples, NewRule, Examples1),
+   filter( NegExamples, NewRule, Examples2),
+   length( Examples1, N1), 
+   length( Examples2, N2),            
+   N1 > 0,                                    
+   Score is N1 - N2.
+
+filter( Examples, Rule, Examples1)  :-
+   findall(Example,(member( Example, Examples), covers(Rule, Example)),Examples1).
 
 candidate(rule(Conseq, Anteced),PosExamples, NegExamples, Vars, rule(Conseq, [Expr|Anteced]), RetVars) :-
     build_expr(Vars, Expr, RetVars),
