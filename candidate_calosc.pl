@@ -8,7 +8,7 @@ predicate(maz,2).
 
 variables([s,t,x,y,z]).
 
-learn( Predicate, Description)  :-
+learn( Predicate)  :-
    gen_positive(PosExamples),
    get_negative(Predicate, PosExamples, NegExamples),
 	get_variables(Vars),
