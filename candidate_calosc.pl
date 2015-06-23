@@ -6,15 +6,15 @@ known_fact(szwagier(mikolaj, andrzej)).
 predicate(brat,2).
 predicate(maz,2).
 
-variables([a,s,t]).
+variables([s,t,x,y,z]).
 
 learn( Predicate)  :-
-   gen_positive(PosExamples),
-   get_negative(Predicate, PosExamples, NegExamples),
+   follow(gen_positive(PosExamples)),
+   follow(get_negative(Predicate, PosExamples, NegExamples)),
 	get_variables(Vars),
-    build_rule(Predicate, Vars, Rule, RetVars),
+    follow(build_rule(Predicate, Vars, Rule, RetVars)),
     writeln(Rule),
-   learn( Rule, PosExamples, NegExamples, RetVars, Description),                                     
+   follow(learn( Rule, PosExamples, NegExamples, RetVars, Description)),                                     
    nl, write( Predicate), write('  <== '), nl,                                   
    write( Description).                                      
 
@@ -58,14 +58,14 @@ build_rule(Predicate, vars(_,[X,Y|Rest],[]), Rule, vars(Rest,[X,Y], [])):-
 learn(_, [], _, _,[]).               
 
 learn( Rule, PosExamples, NegExamples, Vars, [NewRule | NewRules])  :-
-   learn_conj( Rule, PosExamples, NegExamples, Vars,NewRule, _),
-   remove( PosExamples, NewRule, RestPosExamples),                       
-   learn( Rule, RestPosExamples, NegExamples, Vars, NewRules).   
+   follow(learn_conj( Rule, PosExamples, NegExamples, Vars,NewRule, _)),
+   follow(remove( PosExamples, NewRule, RestPosExamples)),                       
+   follow(learn( Rule, RestPosExamples, NegExamples, Vars, NewRules)).   
 
 remove( [], _, []).
 
 remove( [Example | Examples], Rule, Examples1)  :-
-   covers(Rule, Example), !,                                        
+   follow(covers(Rule, Example)), !,                                        
    remove( Examples, Rule, Examples1).                                     
 
 remove( [Example | Examples], Rule, [Example | Examples1])  :-                         
@@ -74,10 +74,10 @@ remove( [Example | Examples], Rule, [Example | Examples1])  :-
 learn_conj( Rule, _, [], Vars, Rule, Vars ).
 
 learn_conj( Rule, PosExamples,NegExamples, Vars, NewRule, RetVars)  :-
-   choose_cond(Rule, PosExamples,NegExamples, Vars, Rule1, Vars1),                        
+   follow(choose_cond(Rule, PosExamples,NegExamples, Vars, Rule1, Vars1)),                        
    filter( PosExamples, Rule1, PosExamples1),
    filter( NegExamples, Rule1, NegExamples1),
-   learn_conj( Rule1, PosExamples1, NegExamples1, Vars1, NewRule, RetVars).
+   follow(learn_conj( Rule1, PosExamples1, NegExamples1, Vars1, NewRule, RetVars)).
 
 choose_cond(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars)  :-
    findall( rule_pack(NR,NV)/Score, score( Rule, PosExamples, NegExamples, Vars, NR, NV, Score), RVs),
@@ -91,7 +91,7 @@ best( [ AV0/S0, AV1/S1 | AVSlist], AttVal)  :-
    best( [AV0/S0 | AVSlist], AttVal).
 
 score(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars, Score) :-
-   candidate( Rule, PosExamples, NegExamples, Vars, NewRule, RetVars),             
+   candidate( Rule, PosExamples, NegExamples, Vars, NewRule, RetVars),
    filter( PosExamples, NewRule, Examples1),
    filter( NegExamples, NewRule, Examples2),
    length( Examples1, N1), 
@@ -111,11 +111,6 @@ build_expr(Vars, Expr, RetVars) :-
     build_arg_list(N, Vars, false, ArgList, RetVars),
     permutation(ArgList,PermArgs),
     Expr =.. [Pred|PermArgs].
-
-build_expr(vars([],Used,LocalUsed), Expr, RetVars) :-
-  	writeln('dodajzmiennne'),
-    read(NewArg),
-    build_expr(vars([NewArg],Used,LocalUsed), Expr, RetVars).
 
 build_arg_list(1, vars(New, Used, LocalUsed), true, [Arg], vars(RetNew, RetUsed, [])) :-
 	insert_arg(vars(New, Used, LocalUsed), true, vars(RetNew, Used1, RetLocal), _, Arg),
@@ -211,3 +206,21 @@ find_binding(Arg1, Arg2, [binding(X, _) | RestBindings], BindingOut) :-
     Arg1 \= X,
     find_binding(Arg1, Arg2, RestBindings, BindingOut).
 find_binding(Arg1, Arg2, [], binding(Arg1, Arg2)).
+
+follow(Goal) :- !,
+	write('CALL: '), write_predicate(Goal), nl,
+	call(Goal),
+	write('EXIT: '), write_predicate(Goal), nl.
+
+follow(Goal) :- !,
+	write('FAIL: '), write_predicate(Goal), nl,
+	fail.
+
+write_predicate(Pred) :- !,
+	Pred =.. [Name | Args],
+	write(Name), nl,
+	write_list_of_args(Args).
+write_list_of_args([Arg]) :- !,
+	write('  --  '), write(Arg), nl.
+write_list_of_args([Arg | RArgs]) :- !,
+	write_list_of_args([Arg]), write_list_of_args(RArgs).
