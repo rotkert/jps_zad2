@@ -6,7 +6,7 @@ known_fact(szwagier(mikolaj, andrzej)).
 predicate(brat,2).
 predicate(maz,2).
 
-variables([s,t,x,y,z]).
+variables([a,s,t]).
 
 learn( Predicate)  :-
    gen_positive(PosExamples),
@@ -111,6 +111,11 @@ build_expr(Vars, Expr, RetVars) :-
     build_arg_list(N, Vars, false, ArgList, RetVars),
     permutation(ArgList,PermArgs),
     Expr =.. [Pred|PermArgs].
+
+build_expr(vars([],Used,LocalUsed), Expr, RetVars) :-
+  	writeln('dodajzmiennne'),
+    read(NewArg),
+    build_expr(vars([NewArg],Used,LocalUsed), Expr, RetVars).
 
 build_arg_list(1, vars(New, Used, LocalUsed), true, [Arg], vars(RetNew, RetUsed, [])) :-
 	insert_arg(vars(New, Used, LocalUsed), true, vars(RetNew, Used1, RetLocal), _, Arg),
