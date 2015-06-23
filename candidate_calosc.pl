@@ -95,9 +95,9 @@ score(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars, Score) :-
    filter( PosExamples, NewRule, Examples1),
    filter( NegExamples, NewRule, Examples2),
    length( Examples1, N1), 
-   length( Examples2, _),            
+   length( Examples2, N2),            
    N1 > 0,                                    
-   Score is N1.
+   Score is N1 - N2.
 
 filter( Examples, Rule, Examples1)  :-
    findall(Example,(member( Example, Examples), covers(Rule, Example)),Examples1).
@@ -109,11 +109,12 @@ candidate(rule(Conseq, Anteced),PosExamples, NegExamples, Vars, rule(Conseq, [Ex
 build_expr(Vars, Expr, RetVars) :-
     predicate(Pred, N),
     build_arg_list(N, Vars, false, ArgList, RetVars),
-    Expr =.. [Pred|ArgList].
+    permutation(ArgList,PermArgs),
+    Expr =.. [Pred|PermArgs].
 
 build_arg_list(1, vars(New, Used, LocalUsed), true, [Arg], vars(RetNew, RetUsed, [])) :-
-	insert_arg(vars(New, Used, LocalUsed), true, vars(RetNew, Used, RetLocal), _, Arg),
-    conc(Used, RetLocal, RetUsed).
+	insert_arg(vars(New, Used, LocalUsed), true, vars(RetNew, Used1, RetLocal), _, Arg),
+    conc(Used1, RetLocal, RetUsed).
 
 build_arg_list(1, vars(New, Used, LocalUsed), false, [Arg], vars(New, RetUsed, [])) :-
 	member1(Arg,Used),
@@ -130,17 +131,19 @@ insert_arg(vars(New, Used, LocalUsed), false, vars(New, Used, [Arg|LocalUsed]), 
     member1(Arg, Used),
     not(member(Arg, LocalUsed)).
 
-insert_arg(vars(New, Used, LocalUsed), true, vars(New1, Used, [Arg|LocalUsed]), true, Arg) :-
-    member1(Arg, New),
-    delete(Arg, New, New1).
+insert_arg(vars(New, Used, LocalUsed), true, vars(New1, Used1, [Arg|LocalUsed]), true, Arg) :-
+    conc(New, Used, All),
+    member1(Arg, All),
+    not(member(Arg,LocalUsed)),
+    delete1(Arg, New, Used, New1, Used1).
 
-insert_arg(vars(New, Used, LocalUsed), false, vars(New, Used, [Arg|LocalUsed]), false, Arg) :-
-    member1(Arg, Used),
-    not(member(Arg, LocalUsed)).
+delete1(Arg, New, Used, New1, Used) :-
+	member(Arg, New),
+	delete(Arg, New, New1).
 
-insert_arg(vars(New, Used, LocalUsed), true, vars(New1, Used, [Arg|LocalUsed]), false, Arg) :-
-    member1(Arg, New),
-    delete(Arg, New, New1).
+delete1(Arg, New, Used, New, Used1) :-
+	member(Arg, Used),
+	delete(Arg, Used, Used1).
 
 suitable(rule(Conseq, Anteced), _, NegExamples):-
     member( Example, NegExamples),
