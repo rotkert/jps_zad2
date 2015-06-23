@@ -9,12 +9,12 @@ predicate(maz,2).
 variables([a,s,t]).
 
 learn( Predicate)  :-
-   gen_positive(PosExamples),
-   get_negative(Predicate, PosExamples, NegExamples),
+   trace(gen_positive(PosExamples)),
+   trace(get_negative(Predicate, PosExamples, NegExamples)),
 	get_variables(Vars),
-    build_rule(Predicate, Vars, Rule, RetVars),
+    trace(build_rule(Predicate, Vars, Rule, RetVars)),
     writeln(Rule),
-   learn( Rule, PosExamples, NegExamples, RetVars, Description),                                     
+   trace(learn( Rule, PosExamples, NegExamples, RetVars, Description)),                                     
    nl, write( Predicate), write('  <== '), nl,                                   
    write( Description).                                      
 
@@ -58,14 +58,14 @@ build_rule(Predicate, vars(_,[X,Y|Rest],[]), Rule, vars(Rest,[X,Y], [])):-
 learn(_, [], _, _,[]).               
 
 learn( Rule, PosExamples, NegExamples, Vars, [NewRule | NewRules])  :-
-   learn_conj( Rule, PosExamples, NegExamples, Vars,NewRule, _),
-   remove( PosExamples, NewRule, RestPosExamples),                       
-   learn( Rule, RestPosExamples, NegExamples, Vars, NewRules).   
+   trace(learn_conj( Rule, PosExamples, NegExamples, Vars,NewRule, _)),
+   trace(remove( PosExamples, NewRule, RestPosExamples)),                       
+   trace(learn( Rule, RestPosExamples, NegExamples, Vars, NewRules)).   
 
 remove( [], _, []).
 
 remove( [Example | Examples], Rule, Examples1)  :-
-   covers(Rule, Example), !,                                        
+   trace(covers(Rule, Example)), !,                                        
    remove( Examples, Rule, Examples1).                                     
 
 remove( [Example | Examples], Rule, [Example | Examples1])  :-                         
@@ -74,14 +74,14 @@ remove( [Example | Examples], Rule, [Example | Examples1])  :-
 learn_conj( Rule, _, [], Vars, Rule, Vars ).
 
 learn_conj( Rule, PosExamples,NegExamples, Vars, NewRule, RetVars)  :-
-   choose_cond(Rule, PosExamples,NegExamples, Vars, Rule1, Vars1),                        
-   filter( PosExamples, Rule1, PosExamples1),
-   filter( NegExamples, Rule1, NegExamples1),
-   learn_conj( Rule1, PosExamples1, NegExamples1, Vars1, NewRule, RetVars).
+   trace(choose_cond(Rule, PosExamples,NegExamples, Vars, Rule1, Vars1)),                        
+   trace(filter( PosExamples, Rule1, PosExamples1)),
+   trace(filter( NegExamples, Rule1, NegExamples1)),
+   trace(learn_conj( Rule1, PosExamples1, NegExamples1, Vars1, NewRule, RetVars)).
 
 choose_cond(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars)  :-
    findall( rule_pack(NR,NV)/Score, score( Rule, PosExamples, NegExamples, Vars, NR, NV, Score), RVs),
-   best( RVs, rule_pack(NewRule, RetVars)).
+   trace(best( RVs, rule_pack(NewRule, RetVars))).
 
 best( [ AttVal/_], AttVal).
 best( [ AV0/S0, AV1/S1 | AVSlist], AttVal)  :-
@@ -91,9 +91,9 @@ best( [ AV0/S0, AV1/S1 | AVSlist], AttVal)  :-
    best( [AV0/S0 | AVSlist], AttVal).
 
 score(Rule, PosExamples, NegExamples, Vars, NewRule, RetVars, Score) :-
-   candidate( Rule, PosExamples, NegExamples, Vars, NewRule, RetVars),             
-   filter( PosExamples, NewRule, Examples1),
-   filter( NegExamples, NewRule, Examples2),
+   trace(candidate( Rule, PosExamples, NegExamples, Vars, NewRule, RetVars)),
+   trace(filter( PosExamples, NewRule, Examples1)),
+   trace(filter( NegExamples, NewRule, Examples2)),
    length( Examples1, N1), 
    length( Examples2, N2),            
    N1 > 0,                                    
@@ -211,3 +211,22 @@ find_binding(Arg1, Arg2, [binding(X, _) | RestBindings], BindingOut) :-
     Arg1 \= X,
     find_binding(Arg1, Arg2, RestBindings, BindingOut).
 find_binding(Arg1, Arg2, [], binding(Arg1, Arg2)).
+
+trace(Goal) :-
+	write('CALL: '), write_predicate(Goal), nl,
+	call(Goal),
+	write('EXIT: '), write_predicate(Goal), nl.
+
+trace(Goal) :-
+	write('FAIL: '), write_predicate(Goal), nl,
+	fail.
+
+write_predicate(Pred) :-
+	Pred =.. [Name | Args],
+	write(Name), nl,
+	write_list_of_args(Args).
+write_list_of_args([Arg]) :-
+	write('  --  '), write(Arg), nl.
+write_list_of_args([Arg | RArgs]) :-
+	write_list_of_args([Arg]), write_list_of_args(RArgs).
+write_list_of_args([]).
